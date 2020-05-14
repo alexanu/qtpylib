@@ -113,12 +113,9 @@ def heikinashi(bars):
                         bars['low'] + bars['close']) / 4
 
     # ha open
-    bars.loc[:1, 'ha_open'] = (bars['open'] + bars['close']) / 2
-    prev_open = bars[:1]['ha_open'].values[0]
-    for idx, _ in bars[1:][['ha_open', 'ha_close']].iterrows():
-        loc = bars.index.get_loc(idx)
-        prev_open = (prev_open + bars['ha_close'].values[loc - 1]) / 2
-        bars.loc[loc:loc + 1, 'ha_open'] = prev_open
+    bars.at[0, 'ha_open'] = (bars.at[0, 'open'] + bars.at[0, 'close']) / 2
+    for i in range(1, len(bars)):
+        bars.at[i, 'ha_open'] = (bars.at[i - 1, 'ha_open'] + bars.at[i - 1, 'ha_close']) / 2
 
     bars['ha_high'] = bars.loc[:, ['high', 'ha_open', 'ha_close']].max(axis=1)
     bars['ha_low'] = bars.loc[:, ['low', 'ha_open', 'ha_close']].min(axis=1)
@@ -216,8 +213,7 @@ def atr(bars, window=14, exp=False):
     else:
         res = rolling_mean(tr, window)
 
-    res = pd.Series(res)
-    return (res.shift(1) * (window - 1) + res) / window
+    return pd.Series(res)
 
 
 # ---------------------------------------------
@@ -601,6 +597,14 @@ def pvt(bars):
              bars['close'].shift(1)) * bars['volume']
     return trend.cumsum()
 
+
+def chopiness(bars, window=14):
+    atrsum = true_range(bars).rolling(window).sum()
+    highs = bars['high'].rolling(window).max()
+    lows = bars['low'].rolling(window).min()
+    return 100 * np.log10(atrsum / (highs - lows)) / np.log10(window)
+
+
 # =============================================
 
 
@@ -628,6 +632,7 @@ PandasObject.rsi = rsi
 PandasObject.stoch = stoch
 PandasObject.zscore = zscore
 PandasObject.pvt = pvt
+PandasObject.chopiness = chopiness
 PandasObject.tdi = tdi
 PandasObject.true_range = true_range
 PandasObject.mid_price = mid_price
